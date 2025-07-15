@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "members" ADD COLUMN     "pin" INTEGER NOT NULL DEFAULT 0;
