@@ -204,7 +204,7 @@ export const approveLoan = async (
             const transaction = await tx.transaction.create({
                 data: {
                     loanId: data.loanId,
-                    type: TransactionType.LOAN_APPROVED,
+                    type: TransactionType.LOAN_DISBURSEMENT,
                     amount: existingLoan.amount,
                     status: "COMPLETED",
                     description: `Loan approved by admin`,

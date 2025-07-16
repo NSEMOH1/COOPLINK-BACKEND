@@ -314,3 +314,100 @@ export interface SavingsBalance {
         amount: number;
     }>;
 }
+
+export interface FinancialReport {
+    period: {
+        start: Date;
+        end: Date;
+    };
+    totals: {
+        income: number;
+        expenses: number;
+        netProfit: number;
+    };
+    breakdown: {
+        loanInterest: number;
+        fees: number;
+        penalties: number;
+        operationalCosts: number;
+    };
+}
+
+export interface TrialBalanceReport {
+    period: Date;
+    accounts: {
+        name: string;
+        debit: number;
+        credit: number;
+    }[];
+    totals: {
+        debit: number;
+        credit: number;
+    };
+}
+
+export interface ProfitLossReport {
+    period: {
+        start: Date;
+        end: Date;
+    };
+    revenue: {
+        loanInterest: number;
+        fees: number;
+        otherIncome: number;
+        total: number;
+    };
+    expenses: {
+        salaries: number;
+        operational: number;
+        loanLossProvision: number;
+        total: number;
+    };
+    netProfit: number;
+}
+
+export interface BalanceSheetReport {
+    date: Date;
+    assets: {
+        current: {
+            cash: number;
+            receivables: number;
+            loansOutstanding: number;
+            total: number;
+        };
+        fixed: number;
+        total: number;
+    };
+    liabilities: {
+        current: number;
+        longTerm: number;
+        total: number;
+    };
+    equity: number;
+}
+export interface LoanRepaymentReport {
+    period: {
+        start: Date;
+        end: Date;
+    };
+    summary: {
+        totalDue: number;
+        totalPaid: number;
+        totalOverdue: number;
+        collectionRate: number;
+    };
+    breakdown: {
+        byLoanType: {
+            name: string;
+            due: number;
+            paid: number;
+            overdue: number;
+        }[];
+        byRank: {
+            rank: string;
+            due: number;
+            paid: number;
+            overdue: number;
+        }[];
+    };
+}

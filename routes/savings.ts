@@ -13,6 +13,10 @@ import {
     getSavingsBalance,
     withdrawSavings,
 } from "../services/savingsService";
+import {
+    notifySavingsDeposit,
+    notifyTransaction,
+} from "../services/notificationService";
 
 const router = Router();
 
@@ -38,6 +42,21 @@ router.post(
                 ...savingsData,
                 memberId: memberId,
             });
+
+            await notifySavingsDeposit(
+                memberId,
+                data.id,
+                savingsData.amount.toString(),
+                savingsData.category_name
+            );
+
+            await notifyTransaction(
+                memberId,
+                data.id,
+                savingsData.amount.toString(),
+                "SAVINGS_DEPOSIT",
+                `${savingsData.category_name} savings deposit`
+            );
 
             res.status(201).json({
                 success: true,
@@ -90,7 +109,7 @@ router.post(
 
             if (!memberId) {
                 res.status(401).json({
-                    error: "User not authenticated",
+                    error: "Member not authenticated",
                 });
                 return;
             }
@@ -98,6 +117,14 @@ router.post(
                 ...savingsData,
                 memberId: memberId,
             });
+
+            await notifyTransaction(
+                memberId,
+                data.id,
+                savingsData.amount.toString(),
+                "SAVINGS_WITHDRAWAL",
+                `${savingsData.category_name} savings withdrawal`
+            );
 
             res.status(201).json({
                 success: true,

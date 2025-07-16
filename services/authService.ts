@@ -38,6 +38,7 @@ export const authenticateMember = async (loginData: LoginData) => {
         first_name: member.first_name,
         last_name: member.last_name,
         rank: member.Personel?.rank,
+        bank: member.bank,
     });
 
     return {
@@ -125,7 +126,7 @@ export const generateMemberPassword = async (data: { memberId: string }) => {
             const serialNumber = (civilianCount + 1)
                 .toString()
                 .padStart(3, "0");
-            updateData.service_number = `301hag${serialNumber}`;
+            updateData.service_number = `301hagcms${serialNumber}`;
         }
 
         const updatedMember = await prisma.member.update({

@@ -1,4 +1,4 @@
-import { SavingStatus, SavingType } from "@prisma/client";
+import { SavingStatus, SavingType, TransactionType } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "../config/database";
 import { createSavings, IWithdrawSavings } from "../types";
@@ -68,7 +68,7 @@ export const addSavings = async (data: createSavings) => {
             data: {
                 memberId: data.memberId,
                 amount: data.amount,
-                type: "SAVINGS_DEPOSIT",
+                type: TransactionType.SAVINGS_DEPOSIT,
                 reference: saving.reference,
                 description: `Savings deposit to ${category.name}`,
                 status: "COMPLETED",
@@ -102,48 +102,34 @@ export const withdrawSavings = async (data: IWithdrawSavings) => {
         where: { type: data.category_name as SavingType },
     });
 
-    if (!category) {
-        throw new Error("Savings Category doesn't exist");
-    }
-
-    if (category.name === "COOPERATIVE") {
+    if (!category) throw new Error("Savings Category doesn't exist");
+    if (category.name === "COOPERATIVE")
         throw new Error("You cannot withdraw this yet");
-    }
 
     const member = await prisma.member.findUnique({
         where: { id: data.memberId },
-        select: {
-            id: true,
-            pin: true,
-            totalSavings: true,
-        },
+        select: { id: true, pin: true, totalSavings: true },
     });
 
-    if (!member) {
-        throw new Error("Member doesn't exist");
-    }
+    if (!member) throw new Error("Member doesn't exist");
 
     const isPinValid = await comparePin(data.pin, member.pin);
-    if (!isPinValid) {
-        throw new Error("Invalid PIN");
-    }
+    if (!isPinValid) throw new Error("Invalid PIN");
 
+    const amount = new Decimal(data.amount);
     const zero = new Decimal(0);
-    if (data.amount.lte(zero)) {
-        throw new Error("Amount must be greater than zero");
-    }
-
     const memberTotalSavings = new Decimal(member.totalSavings);
-    if (memberTotalSavings.lt(data.amount)) {
+
+    if (amount.lte(zero)) throw new Error("Amount must be greater than zero");
+    if (memberTotalSavings.lt(amount))
         throw new Error("Insufficient savings balance");
-    }
 
     const result = await prisma.$transaction(async (tx) => {
         const saving = await tx.saving.create({
             data: {
                 memberId: data.memberId,
                 categoryId: category.id,
-                amount: data.amount.negated(),
+                amount: amount.negated(),
                 reference: generateSavingsReference(),
                 status: SavingStatus.COMPLETED,
             },
@@ -156,20 +142,15 @@ export const withdrawSavings = async (data: IWithdrawSavings) => {
                         email: true,
                     },
                 },
-                category: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
+                category: { select: { id: true, name: true } },
             },
         });
 
         await tx.transaction.create({
             data: {
                 memberId: data.memberId,
-                amount: data.amount,
-                type: "SAVINGS_WITHDRAWAL",
+                amount: amount.toNumber(),
+                type: TransactionType.SAVINGS_WITHDRAWAL,
                 reference: saving.reference,
                 description: `Savings withdrawal from ${category.name}`,
                 status: SavingStatus.COMPLETED,
@@ -178,11 +159,7 @@ export const withdrawSavings = async (data: IWithdrawSavings) => {
 
         await tx.member.update({
             where: { id: data.memberId },
-            data: {
-                totalSavings: {
-                    decrement: data.amount.toNumber(),
-                },
-            },
+            data: { totalSavings: { decrement: amount.toNumber() } },
         });
 
         return saving;
@@ -208,9 +185,6 @@ export const getSavingsBalance = async (memberId: string) => {
         by: ["categoryId"],
         where: {
             memberId: memberId,
-            amount: {
-                gt: 0,
-            },
         },
         _sum: {
             amount: true,

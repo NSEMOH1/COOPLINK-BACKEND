@@ -148,6 +148,12 @@ enum MemberStatus {
   PENDING
 }
 
+enum RequestStatus {
+  APPROVED
+  REJECTED
+  PENDING
+}
+
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -187,6 +193,7 @@ model Member {
   Notification Notification[]
   Civilian     Civilian?
   Personel     Personel?
+  Request      Request[]
 
   @@map("members")
 }
@@ -470,4 +477,17 @@ model Notification {
   userId     String?
 
   @@map("notifications")
+}
+
+model Request {
+  id        String        @id @default(cuid())
+  reason    String
+  amount    Int
+  member    Member?       @relation(fields: [memberId], references: [id])
+  memberId  String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  status    RequestStatus @default(PENDING)
+
+  @@map("requests")
 }

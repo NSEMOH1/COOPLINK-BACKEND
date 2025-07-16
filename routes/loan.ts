@@ -12,6 +12,10 @@ import { AuthenticatedRequest } from "../types";
 import { requireRoles } from "../middleware/requireRoles";
 import { Rank, Role } from "@prisma/client";
 import { prisma } from "../config/database";
+import {
+    notifyLoanApplication,
+    notifyLoanStatus,
+} from "../services/notificationService";
 
 const router = Router();
 
@@ -22,11 +26,25 @@ router.post(
         try {
             const memberId = req.user?.id;
 
+            if (!memberId) {
+                res.status(401).json({
+                    success: false,
+                    message: "User not authenticated",
+                });
+                return;
+            }
+
             const result = await applyForLoan({
                 ...req.body,
                 memberId,
             });
 
+            await notifyLoanApplication(
+                memberId,
+                result.loanId,
+                req.body.amount,
+                req.body.categoryName
+            );
             res.status(201).json({
                 ...result,
             });
@@ -104,6 +122,23 @@ router.post(
 
             const result = await approveLoan({ loanId }, adminId);
 
+            if (!result.loan?.memberId) {
+                res.status(401).json({
+                    success: false,
+                    message: "No member found",
+                });
+                return;
+            }
+
+            await notifyLoanStatus(
+                result.loan?.memberId,
+                loanId,
+                "APPROVED",
+                adminId,
+                result.loan?.approvedAmount,
+                result.loan?.categoryId
+            );
+
             if (!result.success) {
                 res.status(400).json({
                     success: false,
@@ -151,6 +186,23 @@ router.post(
                     rejectionReason,
                 },
                 adminId
+            );
+
+            if (!result.loan?.memberId) {
+                res.status(401).json({
+                    success: false,
+                    message: "No member found",
+                });
+                return;
+            }
+
+            await notifyLoanStatus(
+                result.loan.memberId,
+                loanId,
+                "REJECTED",
+                adminId,
+                result.loan.amount,
+                result.loan.categoryId
             );
 
             if (!result.success) {
