@@ -4,6 +4,7 @@ import {
     approveLoan,
     confirmLoanWithOTP,
     getActiveLoanCategory,
+    getAdminLoanStatistics,
     getAllLoans,
     getMemberLoanBalance,
     rejectLoan,
@@ -63,6 +64,23 @@ router.get(
 
             res.status(201).json({
                 result,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.get(
+    "/admin-stats",
+    requireRoles([Role.ADMIN, Role.SUPER_ADMIN]),
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+        try {
+            const adminStats = await getAdminLoanStatistics();
+
+            res.status(200).json({
+                success: true,
+                data: adminStats,
             });
         } catch (error) {
             next(error);

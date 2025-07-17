@@ -307,6 +307,7 @@ export const findUserByEmail = async (email: string) => {
             email: true,
             password: true,
             role: true,
+            status: true
         },
     });
 

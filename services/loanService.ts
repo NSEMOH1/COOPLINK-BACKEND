@@ -457,6 +457,21 @@ export const getAllLoans = () => {
                 select: {
                     first_name: true,
                     last_name: true,
+                    service_number: true,
+                    bank: {
+                        select: {
+                            account_number: true,
+                        },
+                    },
+                },
+            },
+            repayments: {
+                select: {
+                    dueDate: true,
+                    amount: true,
+                    status: true,
+                    paidAt: true,
+                    createdAt: true,
                 },
             },
             approvedBy: {
@@ -481,4 +496,55 @@ export const getAllLoans = () => {
     }
 
     return loans;
+};
+
+export const getAdminLoanStatistics = async () => {
+    const admins = await prisma.user.findMany({
+        select: {
+            id: true,
+            full_name: true,
+            email: true,
+        },
+    });
+
+    const adminStats = await Promise.all(
+        admins.map(async (admin) => {
+            const approvedCount = await prisma.loan.count({
+                where: {
+                    approvedById: admin.id,
+                },
+            });
+
+            const rejectedCount = await prisma.loan.count({
+                where: {
+                    rejectedById: admin.id,
+                },
+            });
+
+            const disbursedCount = await prisma.loan.count({
+                where: {
+                    approvedById: admin.id,
+                    status: "DISBURSED",
+                },
+            });
+
+            const pendingCount = await prisma.loan.count({
+                where: {
+                    approvedById: admin.id,
+                    status: "PENDING",
+                },
+            });
+
+            return {
+                ...admin,
+                approvedCount,
+                rejectedCount,
+                disbursedCount,
+                pendingCount,
+                totalActions: approvedCount + rejectedCount,
+            };
+        })
+    );
+
+    return adminStats;
 };

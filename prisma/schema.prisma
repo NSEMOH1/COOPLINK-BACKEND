@@ -90,6 +90,7 @@ enum LoanStatus {
   COMPLETED
   DEFAULTED
   PENDING_VERIFICATION
+  DISBURSED
 }
 
 enum SavingStatus {

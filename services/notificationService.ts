@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { PrismaClient } from "@prisma/client";
 import { Server } from "http";
 import { Decimal } from "@prisma/client/runtime/library";
+import { config } from "../config/env";
 
 const prisma = new PrismaClient();
 
@@ -70,7 +71,7 @@ const setupSocketHandlers = () => {
 const initializeNotificationService = (server: Server) => {
     io = new SocketIOServer(server, {
         cors: {
-            origin: "http://localhost:3000",
+            origin: config.allowedOrigins,
             methods: ["GET", "POST"],
         },
     });

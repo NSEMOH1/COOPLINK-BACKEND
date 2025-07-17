@@ -66,6 +66,12 @@ export const authenticateUser = async (loginData: UserLoginData) => {
         throw new Error("Password is required");
     }
 
+    if (user.status === "INACTIVE") {
+        throw new Error(
+            "You have been suspended, your account is currently inactive"
+        );
+    }
+
     const isPasswordValid = await comparePasswords(
         loginData.password,
         user.password

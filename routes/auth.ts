@@ -21,6 +21,7 @@ import {
     loginSchema,
     userLoginSchema,
 } from "../utils/validators/auth";
+import { notifyMemberRegistration } from "../services/notificationService";
 
 const router = Router();
 
@@ -109,7 +110,7 @@ router.post(
             const userData = req.body as CreateMemberData;
 
             const member = await createMember(userData);
-
+            await notifyMemberRegistration(member.id);
             res.status(201).json({
                 success: true,
                 message:

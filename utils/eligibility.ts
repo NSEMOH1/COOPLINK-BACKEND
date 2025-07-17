@@ -27,7 +27,7 @@ export const checkExistingLoans = async (
                 in: [
                     LoanStatus.ACTIVE,
                     LoanStatus.PENDING,
-                    // LoanStatus.PENDING_VERIFICATION,
+                    LoanStatus.PENDING_VERIFICATION,
                     LoanStatus.APPROVED,
                 ],
             },
@@ -44,6 +44,8 @@ export const checkExistingLoans = async (
                 "Your have an existing loan application being processed. Please wait for verification to complete.",
             [LoanStatus.APPROVED]:
                 "You have an approved loan that hasn't been disbursed yet. Please wait for disbursement.",
+            [LoanStatus.DISBURSED]:
+                "You currently have an active loan. Please complete repayment before applying for a new one.",
             REJECTED: "",
             COMPLETED: "",
             DEFAULTED: "",

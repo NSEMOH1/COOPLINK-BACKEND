@@ -17,6 +17,7 @@ import { MemberStatus, Role, UserStatus } from "@prisma/client";
 import { generateMemberPassword } from "../services/authService";
 import { validateBody } from "../middleware/validateBody";
 import { pinSchema } from "../utils/validators/auth";
+import { notifyMemberApproval } from "../services/notificationService";
 
 const router = Router();
 
@@ -199,16 +200,33 @@ router.delete(
 router.get(
     "/members/:memberId/approve",
     requireRoles([Role.ADMIN, Role.SUPER_ADMIN]),
-    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    async (
+        req: AuthenticatedRequest,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
         try {
             const { memberId } = req.params;
+            const adminId = req.user?.id;
 
             if (!memberId) {
                 res.status(400).json({ message: "Member ID is required" });
                 return;
             }
 
+            if (!adminId) {
+                res.status(401).json({
+                    error: "User not authenticated",
+                });
+                return;
+            }
+
             const approvedMember = await approveMember({ memberId });
+            await notifyMemberApproval(
+                memberId,
+                approvedMember.status,
+                adminId
+            );
             res.status(200).json({
                 message: "Member approved successfully",
                 id: approvedMember.id,
