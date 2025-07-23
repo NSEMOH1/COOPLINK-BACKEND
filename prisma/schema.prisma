@@ -222,12 +222,12 @@ model Personel {
 }
 
 model KycInfo {
-  id             String  @id @default(cuid())
+  id             String @id @default(cuid())
   identification Bytes?
   id_card        Bytes
   signature      Bytes
-  member         Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  memberId       String  @unique
+  member         Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId       String @unique
 
   @@map("kyc_info")
 }
@@ -292,14 +292,18 @@ model Guarantor {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  password      String?
-  full_name     String
-  role          Role           @default(STAFF)
-  created_at    DateTime       @default(now())
-  updated_at    DateTime       @updatedAt
-  status        UserStatus     @default(ACTIVE)
+  id         String     @id @default(cuid())
+  email      String     @unique
+  password   String?
+  full_name  String
+  role       Role       @default(STAFF)
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  status     UserStatus @default(ACTIVE)
+  canEdit    Boolean    @default(false)
+  canDelete  Boolean    @default(false)
+  canView    Boolean    @default(false)
+
   department    Department
   Notification  Notification[]
   approvedLoans Loan[]         @relation("approvedLoans")

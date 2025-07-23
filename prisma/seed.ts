@@ -391,11 +391,11 @@ async function main() {
     // // await prisma.repayment.deleteMany({});
     // // await prisma.loan.deleteMany({});
     // // await prisma.member.deleteMany({});
-    await prisma.repayment.deleteMany({});
-    await prisma.loan.deleteMany({});
-    await prisma.transaction.deleteMany({});
-    await prisma.saving.deleteMany({});
-    await prisma.member.deleteMany({});
+    // await prisma.repayment.deleteMany({});
+    // await prisma.loan.deleteMany({});
+    // await prisma.transaction.deleteMany({});
+    // await prisma.saving.deleteMany({});
+    // await prisma.member.deleteMany({});
 
     // await seedDatabase();
     // await seedSavingsType();

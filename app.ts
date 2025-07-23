@@ -15,11 +15,12 @@ import { requestRoutes } from "./routes/request";
 import { reportsRoutes } from "./routes/reports";
 import { initializeNotificationService } from "./services/notificationService";
 import { notificationRoutes } from "./routes/notifications";
+import { adminReportRoutes } from "./routes/admin-report";
 
 const createApp = () => {
     const app = express();
     const server = createServer(app);
-    initializeNotificationService(server)
+    initializeNotificationService(server);
 
     app.use(helmet());
 
@@ -55,6 +56,7 @@ const createApp = () => {
     app.use("/api/requests", requestRoutes);
     app.use("/api/reports", reportsRoutes);
     app.use("/api/notifications", notificationRoutes);
+    app.use("/api/admin-report", adminReportRoutes);
 
     app.use(/.*/, (req, res) => {
         res.status(404).json({ error: "Route not found" });
