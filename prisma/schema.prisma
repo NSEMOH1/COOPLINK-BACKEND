@@ -147,6 +147,8 @@ enum MemberStatus {
   APPROVED
   REJECTED
   PENDING
+  ACTIVE
+  INACTIVE
 }
 
 enum RequestStatus {
@@ -178,7 +180,7 @@ model Member {
   date_of_birth    DateTime           @default(now())
   created_at       DateTime           @default(now())
   updated_at       DateTime           @updatedAt
-  profile_picture  String?
+  profile_picture  Bytes?
   totalSavings     Int
   monthlyDeduction Int                @default(0)
   security         SecurityQuestion[]
@@ -221,9 +223,9 @@ model Personel {
 
 model KycInfo {
   id             String  @id @default(cuid())
-  identification String?
-  id_card        String
-  signature      String
+  identification Bytes?
+  id_card        Bytes
+  signature      Bytes
   member         Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
   memberId       String  @unique
 

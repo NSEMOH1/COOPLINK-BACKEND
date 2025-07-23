@@ -11,7 +11,7 @@ import {
     updateMember,
     updateUser,
 } from "../services/userService";
-import { AuthenticatedRequest, UpdateUserData } from "../types";
+import { AuthenticatedRequest, UpdateMemberData, UpdateUserData } from "../types";
 import { requireRoles } from "../middleware/requireRoles";
 import { MemberStatus, Role, UserStatus } from "@prisma/client";
 import { generateMemberPassword } from "../services/authService";
@@ -50,7 +50,7 @@ router.put(
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params;
-            const memberData: UpdateUserData = req.body;
+            const memberData: UpdateMemberData = req.body;
 
             if (!id) {
                 res.status(400).json({ message: "Member ID is required" });
@@ -61,7 +61,17 @@ router.put(
                 res.status(400).json({ message: "No update data provided" });
                 return;
             }
-            const updatedMember = await updateMember(id, memberData);
+
+            let updateData: any = { ...memberData };
+            if (memberData.kycInfo) {
+                updateData.kycInfo = {
+                    update: {
+                        ...memberData.kycInfo,
+                    },
+                };
+            }
+
+            const updatedMember = await updateMember(id, updateData);
 
             res.status(200).json({
                 message: "Member updated successfully",

@@ -281,6 +281,8 @@ export const findMemberByServiceNumber = async (service_number: string) => {
             email: true,
             password: true,
             role: true,
+            status: true,
+            service_number: true,
             bank: {
                 select: {
                     name: true,

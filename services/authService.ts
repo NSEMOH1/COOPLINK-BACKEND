@@ -22,6 +22,12 @@ export const authenticateMember = async (loginData: LoginData) => {
         );
     }
 
+    if (member.status === "INACTIVE") {
+        throw new Error(
+            "Your account has is not active. Please contact the administrator."
+        );
+    }
+
     const isPasswordValid = await comparePasswords(
         loginData.password,
         member.password
@@ -39,6 +45,7 @@ export const authenticateMember = async (loginData: LoginData) => {
         last_name: member.last_name,
         rank: member.Personel?.rank,
         bank: member.bank,
+        service_number: member.service_number
     });
 
     return {
@@ -51,6 +58,7 @@ export const authenticateMember = async (loginData: LoginData) => {
             role: member.role,
             rank: member.Personel?.rank,
             bank: member.bank,
+            service_number: member.service_number
         },
     };
 };

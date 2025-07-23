@@ -86,6 +86,59 @@ export interface CreateMemberData {
     }>;
 }
 
+export interface UpdateMemberData {
+    email?: string;
+    password?: string;
+    first_name?: string;
+    last_name?: string;
+    other_name?: string;
+    title?: Title;
+    gender?: Gender;
+    phone?: string;
+    address?: string;
+    state_of_origin?: string;
+    lga?: string;
+    type?: MemberType;
+    role?: Role;
+    profile_picture?: string;
+    bank: {
+        name: string;
+        account_number: string;
+    };
+    kycInfo: {
+        identification: string;
+        id_card: string;
+        signature: string;
+    };
+    rank?: Rank;
+    unit?: string;
+
+    nextOfKin?: {
+        first_name: string;
+        last_name: string;
+        relationship: Relationship;
+        title: Title;
+        phone: string;
+        email?: string;
+        address?: string;
+        gender: Gender;
+    };
+
+    guarantors?: Array<{
+        title: Title;
+        first_name: string;
+        surname: string;
+        relationship: Relationship;
+        gender: Gender;
+        phone: string;
+        email?: string;
+        address: string;
+        rank: Rank;
+        unit?: string;
+        date_of_birth: Date;
+    }>;
+}
+
 export type MemberCreationData =
     | {
           type: "PERSONEL";

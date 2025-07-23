@@ -19,7 +19,7 @@ const router = express.Router();
 
 router.get(
     "/member/:memberId",
-    requireRoles([Role.MEMBER, Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN]),
+    requireRoles([Role.MEMBER]),
     async (req, res) => {
         try {
             const { memberId } = req.params;
@@ -40,7 +40,7 @@ router.get(
 
 router.get(
     "/user/:userId",
-    requireRoles([Role.MEMBER, Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN]),
+    requireRoles([Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN]),
     async (req, res) => {
         try {
             const { userId } = req.params;
@@ -88,7 +88,7 @@ router.put(
 
 router.get(
     "/member/:memberId/unread-count",
-    requireRoles([Role.MEMBER, Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN]),
+    requireRoles([Role.MEMBER]),
     async (req, res) => {
         try {
             const { memberId } = req.params;
