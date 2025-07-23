@@ -11,13 +11,19 @@ import {
     updateMember,
     updateUser,
 } from "../services/userService";
-import { AuthenticatedRequest, UpdateMemberData, UpdateUserData } from "../types";
+import {
+    AuthenticatedRequest,
+    UpdateMemberData,
+    UpdateUserData,
+} from "../types";
 import { requireRoles } from "../middleware/requireRoles";
 import { MemberStatus, Role, UserStatus } from "@prisma/client";
 import { generateMemberPassword } from "../services/authService";
 import { validateBody } from "../middleware/validateBody";
 import { pinSchema } from "../utils/validators/auth";
 import { notifyMemberApproval } from "../services/notificationService";
+import { prisma } from "../config/database";
+import PDFDocument from "pdfkit"
 
 const router = Router();
 
@@ -147,6 +153,39 @@ router.get(
             });
         } catch (error) {
             next(error);
+        }
+    }
+);
+
+router.get(
+    "/members/:id/savings",
+    requireRoles([Role.MEMBER, Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN]),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const savings = await prisma.saving.findMany({
+                where: { memberId: req.params.id },
+                orderBy: { createdAt: "desc" },
+            });
+            res.json(savings);
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.get(
+    "/members/:id/loans",
+    requireRoles([Role.MEMBER, Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN]),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const loans = await prisma.loan.findMany({
+                where: { memberId: req.params.id },
+                orderBy: { createdAt: "desc" },
+                include: { repayments: true },
+            });
+            res.json(loans);
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching loan history" });
         }
     }
 );

@@ -309,7 +309,7 @@ export const findUserByEmail = async (email: string) => {
             email: true,
             password: true,
             role: true,
-            status: true
+            status: true,
         },
     });
 
@@ -333,6 +333,8 @@ export const findMemberById = async (id: string) => {
                     rank: true,
                 },
             },
+            loans: true,
+            savings: true,
         },
     });
 

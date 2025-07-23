@@ -223,9 +223,9 @@ model Personel {
 
 model KycInfo {
   id             String @id @default(cuid())
-  identification Bytes?
-  id_card        Bytes
-  signature      Bytes
+  identification String?
+  id_card        String
+  signature      String
   member         Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
   memberId       String @unique
 
