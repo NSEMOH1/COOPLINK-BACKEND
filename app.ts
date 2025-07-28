@@ -16,6 +16,8 @@ import { reportsRoutes } from "./routes/reports";
 import { initializeNotificationService } from "./services/notificationService";
 import { notificationRoutes } from "./routes/notifications";
 import { adminReportRoutes } from "./routes/admin-report";
+import path from "path";
+import fs from "fs";
 
 const createApp = () => {
     const app = express();
@@ -30,6 +32,11 @@ const createApp = () => {
             credentials: true,
         })
     );
+
+    const uploadsDir = path.join(__dirname, "uploads");
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    }
 
     const limiter = rateLimit({
         windowMs: 15 * 60 * 1000,

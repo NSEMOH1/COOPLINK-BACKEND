@@ -31,6 +31,7 @@ export const createMember = async (userData: CreateMemberData) => {
                 pin: hashedPin,
                 service_number: userData.service_number,
                 profile_picture: userData.profile_picture,
+                date_of_birth: userData.date_of_birth,
                 totalSavings: userData.totalSavings || 0,
                 monthlyDeduction: userData.monthlyDeduction || 0,
                 bank: {
@@ -41,9 +42,9 @@ export const createMember = async (userData: CreateMemberData) => {
                 },
                 kycInfo: {
                     create: {
-                        identification: userData.kycInfo.identification,
-                        id_card: userData.kycInfo.id_card,
-                        signature: userData.kycInfo.signature || "",
+                        identification: userData.kycInfo?.identification,
+                        id_card: userData.kycInfo?.id_card,
+                        signature: userData.kycInfo?.signature || "",
                     },
                 },
                 security: {
@@ -82,28 +83,43 @@ export const createMember = async (userData: CreateMemberData) => {
                         },
                     };
                 }
-            } else if (userData.type === MemberType.CIVILIAN) {
-                memberData.Civilian = {
-                    create: {},
-                };
+            }
 
-                if (userData.guarantors && userData.guarantors.length > 0) {
-                    memberData.Civilian.create.Guarantor = {
-                        create: userData.guarantors.map((guarantor) => ({
-                            title: guarantor.title,
-                            first_name: guarantor.first_name,
-                            last_name: guarantor.surname,
-                            relationship: guarantor.relationship,
-                            gender: guarantor.gender,
-                            phone: guarantor.phone,
-                            email: guarantor.email || "",
-                            address: guarantor.address,
-                            rank: guarantor.rank,
-                            unit: guarantor.unit || "",
-                            date_of_birth: guarantor.date_of_birth,
-                        })),
-                    };
-                }
+            if (userData.type === MemberType.CIVILIAN) {
+                memberData.Civilian = {
+                    create: {
+                        NextOfKin: userData.nextOfKin
+                            ? {
+                                  create: {
+                                      title: userData.nextOfKin.title,
+                                      first_name: userData.nextOfKin.first_name,
+                                      last_name: userData.nextOfKin.last_name,
+                                      relationship:
+                                          userData.nextOfKin.relationship,
+                                      phone: userData.nextOfKin.phone,
+                                      email: userData.nextOfKin.email || "",
+                                      address: userData.nextOfKin.address || "",
+                                      gender: userData.nextOfKin.gender,
+                                  },
+                              }
+                            : undefined,
+                        Guarantor: {
+                            create: userData?.guarantors?.map((guarantor) => ({
+                                title: guarantor.title,
+                                first_name: guarantor.first_name,
+                                last_name: guarantor.surname,
+                                relationship: guarantor.relationship,
+                                gender: guarantor.gender,
+                                phone: guarantor.phone,
+                                email: guarantor.email || "",
+                                address: guarantor.address,
+                                rank: guarantor.rank,
+                                unit: guarantor.unit || "",
+                                date_of_birth: guarantor.date_of_birth,
+                            })),
+                        },
+                    },
+                };
             }
 
             const user = await prisma.member.create({
@@ -119,17 +135,13 @@ export const createMember = async (userData: CreateMemberData) => {
                     Personel:
                         userData.type === MemberType.PERSONEL
                             ? {
-                                  select: {
-                                      rank: true,
-                                  },
+                                  select: { rank: true },
                               }
                             : false,
                     Civilian:
                         userData.type === MemberType.CIVILIAN
                             ? {
-                                  select: {
-                                      id: true,
-                                  },
+                                  select: { id: true },
                               }
                             : false,
                 },

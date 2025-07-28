@@ -177,10 +177,10 @@ model Member {
   role             Role               @default(MEMBER)
   type             MemberType         @default(CIVILIAN)
   lga              String
-  date_of_birth    DateTime           @default(now())
+  date_of_birth    DateTime
   created_at       DateTime           @default(now())
   updated_at       DateTime           @updatedAt
-  profile_picture  Bytes?
+  profile_picture  String
   totalSavings     Int
   monthlyDeduction Int                @default(0)
   security         SecurityQuestion[]
@@ -188,15 +188,16 @@ model Member {
   pin              String
   status           MemberStatus       @default(PENDING)
 
-  kycInfo      KycInfo?
-  loans        Loan[]
-  bank         Bank[]
-  savings      Saving[]
-  transactions Transaction[]
-  Notification Notification[]
-  Civilian     Civilian?
-  Personel     Personel?
-  Request      Request[]
+  kycInfo       KycInfo?
+  loans         Loan[]
+  bank          Bank[]
+  savings       Saving[]
+  transactions  Transaction[]
+  Notification  Notification[]
+  Civilian      Civilian?
+  Personel      Personel?
+  Request       Request[]
+  PasswordReset PasswordReset[]
 
   @@map("members")
 }
@@ -206,6 +207,7 @@ model Civilian {
   member    Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
   memberId  String      @unique
   Guarantor Guarantor[]
+  NextOfKin NextOfKin[]
 
   @@map("civilian")
 }
@@ -223,7 +225,7 @@ model Personel {
 
 model KycInfo {
   id             String @id @default(cuid())
-  identification String?
+  identification String
   id_card        String
   signature      String
   member         Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -260,12 +262,14 @@ model NextOfKin {
   relationship Relationship
   gender       Gender
   phone        String       @unique
-  email        String       @unique
+  email        String
   address      String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   Personel     Personel?    @relation(fields: [personelId], references: [id])
   personelId   String?
+  Civilian     Civilian?    @relation(fields: [civilianId], references: [id])
+  civilianId   String?
 
   @@map("next_of_kin")
 }
@@ -497,4 +501,16 @@ model Request {
   status    RequestStatus @default(PENDING)
 
   @@map("requests")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  member    Member   @relation(fields: [memberId], references: [id])
+  memberId  String
+  userType  Role
+  email     String
+  createdAt DateTime @default(now())
 }

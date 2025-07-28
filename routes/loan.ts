@@ -7,6 +7,7 @@ import {
     getAdminLoanStatistics,
     getAllLoans,
     getMemberLoanBalance,
+    getMemberLoanHistory,
     rejectLoan,
 } from "../services/loanService";
 import { AuthenticatedRequest } from "../types";
@@ -267,6 +268,37 @@ router.get(
             res.json({
                 success: true,
                 ...balances,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.get(
+    "/history",
+    requireRoles([Role.MEMBER]),
+    async (
+        req: AuthenticatedRequest,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const memberId = req.user?.id;
+
+            if (!memberId) {
+                res.status(401).json({
+                    success: false,
+                    error: "User not authenticated",
+                });
+                return;
+            }
+
+            const balances = await getMemberLoanHistory(memberId);
+
+            res.json({
+                success: true,
+                balances: balances
             });
         } catch (error) {
             next(error);

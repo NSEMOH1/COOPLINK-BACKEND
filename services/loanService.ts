@@ -1,6 +1,6 @@
 import { prisma } from "../config/database";
 import { LoanStatus, RepaymentStatus, TransactionType } from "@prisma/client";
-import { LoanApplication, LoanBalance } from "../types";
+import { LoanApplication, LoanBalance, MemberLoanHistory } from "../types";
 import {
     calculateRepayments,
     generateLoanReference,
@@ -547,4 +547,111 @@ export const getAdminLoanStatistics = async () => {
     );
 
     return adminStats;
+};
+
+export const getMemberLoanHistory = async (
+    memberId: string
+): Promise<MemberLoanHistory[]> => {
+    return await prisma.$transaction(async (tx) => {
+        const loans = await tx.loan.findMany({
+            where: { memberId },
+            include: {
+                category: {
+                    select: { name: true },
+                },
+                repayments: {
+                    orderBy: { dueDate: "asc" },
+                    select: {
+                        dueDate: true,
+                        amount: true,
+                        status: true,
+                        paidAt: true,
+                    },
+                },
+                transactions: {
+                    where: {
+                        type: {
+                            in: [
+                                TransactionType.LOAN_DISBURSEMENT,
+                                TransactionType.LOAN_REPAYMENT,
+                                TransactionType.LOAN_REJECTED,
+                            ],
+                        },
+                    },
+                    orderBy: { createdAt: "desc" },
+                    select: {
+                        id: true,
+                        type: true,
+                        amount: true,
+                        createdAt: true,
+                        status: true,
+                        description: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        if (!loans || loans.length === 0) {
+            return [];
+        }
+
+        return loans.map((loan) => {
+            const paidRepayments = loan.repayments.filter(
+                (r) => r.status === "PAID"
+            );
+            const pendingRepayments = loan.repayments.filter(
+                (r) => r.status === "PENDING"
+            );
+
+            const totalRepaid = paidRepayments
+                .reduce(
+                    (sum, repayment) => sum.plus(repayment.amount),
+                    new Decimal(0)
+                )
+                .toNumber();
+
+            const outstandingBalance = Math.max(
+                0,
+                loan.approvedAmount.toNumber() - totalRepaid
+            );
+
+            return {
+                id: loan.id,
+                reference: loan.reference,
+                category: loan.category.name,
+                appliedAmount: loan.amount.toNumber(),
+                approvedAmount: loan.approvedAmount.toNumber(),
+                interestRate: loan.interestRate,
+                durationMonths: loan.durationMonths,
+                status: loan.status,
+                applicationDate: loan.createdAt,
+                approvalDate: loan.startDate,
+                completionDate: loan.endDate,
+                totalRepaid,
+                outstandingBalance,
+                nextPaymentDue:
+                    pendingRepayments.length > 0
+                        ? {
+                              date: pendingRepayments[0].dueDate,
+                              amount: pendingRepayments[0].amount.toNumber(),
+                          }
+                        : undefined,
+                repayments: loan.repayments.map((repayment) => ({
+                    dueDate: repayment.dueDate,
+                    amount: repayment.amount.toNumber(),
+                    status: repayment.status,
+                    paidDate: repayment.paidAt,
+                })),
+                transactions: loan.transactions.map((transaction) => ({
+                    id: transaction.id,
+                    type: transaction.type,
+                    amount: transaction.amount.toNumber(),
+                    date: transaction.createdAt,
+                    status: transaction.status,
+                    description: transaction.description,
+                })),
+            };
+        });
+    });
 };

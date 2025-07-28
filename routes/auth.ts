@@ -22,6 +22,9 @@ import {
     userLoginSchema,
 } from "../utils/validators/auth";
 import { notifyMemberRegistration } from "../services/notificationService";
+import { handleFileUpload } from "../middleware/fileUpload";
+import path from "path";
+import fs from "fs";
 
 const router = Router();
 
@@ -102,19 +105,54 @@ router.post(
     }
 );
 
+router.get("/uploads/:filename", (req, res) => {
+    const filePath = path.join(__dirname, "../uploads", req.params.filename);
+
+    if (fs.existsSync(filePath)) {
+        const ext = path.extname(filePath);
+        let contentType = "application/octet-stream";
+
+        if (ext === ".jpg" || ext === ".jpeg") contentType = "image/jpeg";
+        else if (ext === ".png") contentType = "image/png";
+        else if (ext === ".pdf") contentType = "application/pdf";
+
+        res.setHeader("Content-Type", contentType);
+        res.sendFile(filePath);
+    } else {
+        res.status(404).json({ success: false, message: "File not found" });
+    }
+});
+
 router.post(
     "/member/register",
     validateBody(createMemberSchema),
+    handleFileUpload,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const userData = req.body as CreateMemberData;
+            const userData: CreateMemberData = JSON.parse(req.body.data);
+            
+            const files = req.files as {
+                profile_picture?: Express.Multer.File[];
+                identification?: Express.Multer.File[];
+                id_card?: Express.Multer.File[];
+                signature?: Express.Multer.File[];
+            };
 
-            const member = await createMember(userData);
+            const transformedData = {
+                ...userData,
+                profile_picture: files.profile_picture?.[0]?.filename,
+                kycInfo: {
+                    identification: files.identification?.[0]?.filename,
+                    id_card: files.id_card?.[0]?.filename,
+                    signature: files.signature?.[0]?.filename,
+                },
+            };
+
+            const member = await createMember(transformedData);
             await notifyMemberRegistration(member.id);
             res.status(201).json({
                 success: true,
-                message:
-                    "Member created successfully. Admin must generate password to activate account.",
+                message: "Member created successfully.",
                 data: {
                     id: member.id,
                     email: member.email,
@@ -124,6 +162,20 @@ router.post(
                 },
             });
         } catch (error) {
+            if (req.files) {
+                const files = req.files as Record<
+                    string,
+                    Express.Multer.File[]
+                >;
+                Object.values(files).forEach((fileArray) => {
+                    fileArray.forEach((file) => {
+                        require("fs").unlink(
+                            path.join(__dirname, "../uploads", file.filename),
+                            () => {}
+                        );
+                    });
+                });
+            }
             next(error);
         }
     }
@@ -185,5 +237,42 @@ router.post(
         }
     }
 );
+// router.post(
+//     "/forgot-password",
+//     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+//         try {
+//             const result = await sendPasswordResetOtp(req.body.email);
+//             res.json({ ...result, message: "OTP sent to email" });
+//         } catch (error) {
+//             next(error);
+//         }
+//     }
+// );
+
+// router.post(
+//     "/verify-otp",
+//     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+//         try {
+//             await verifyResetOtp(req.body.email, req.body.otp);
+//             res.json({ success: true, message: "OTP verified" });
+//         } catch (error) {
+//             next(error);
+//         }
+//     }
+// );
+
+// router.post(
+//     "/reset-password",
+//     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+//         try {
+//             await updatePassword(req.body.email, req.body.newPassword);
+//             res.json({ success: true, message: "Password updated" });
+//         } catch (error) {
+//             next(error);
+//         }
+//     }
+// );
 
 export { router as authRoutes };
+
+

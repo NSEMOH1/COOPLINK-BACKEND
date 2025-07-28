@@ -7,7 +7,8 @@ import {
 } from "../utils/password";
 import { generateToken } from "../utils/jwt";
 import { prisma } from "../config/database";
-import { MemberStatus } from "@prisma/client";
+import { MemberStatus, Role } from "@prisma/client";
+import { generateOTP } from "../utils/functions";
 
 export const authenticateMember = async (loginData: LoginData) => {
     const member = await findMemberByServiceNumber(loginData.service_number);
@@ -44,8 +45,9 @@ export const authenticateMember = async (loginData: LoginData) => {
         first_name: member.first_name,
         last_name: member.last_name,
         rank: member.Personel?.rank,
-        bank: member.bank,
-        service_number: member.service_number
+        bank_name: member.bank[0].name,
+        account_number: member.bank[0].account_number,
+        service_number: member.service_number,
     });
 
     return {
@@ -58,7 +60,7 @@ export const authenticateMember = async (loginData: LoginData) => {
             role: member.role,
             rank: member.Personel?.rank,
             bank: member.bank,
-            service_number: member.service_number
+            service_number: member.service_number,
         },
     };
 };
@@ -205,22 +207,108 @@ export const changePassword = async (data: {
         throw error;
     }
 };
+// export const sendPasswordResetOtp = async (email: string) => {
+//     const [member, user] = await Promise.all([
+//         prisma.member.findUnique({ where: { email } }),
+//         prisma.user.findUnique({ where: { email } }),
+//     ]);
 
-// // Email service (implement based on your email provider)
-// const sendPasswordEmail = async (email: string, password: string, name: string) => {
-//     // Implement your email sending logic here
-//     // This could use SendGrid, AWS SES, Nodemailer, etc.
-//     console.log(`Email sent to ${email} with temporary password: ${password}`);
+//     if (!member && !user) {
+//         throw new Error("Email not found");
+//     }
 
-//     // Example implementation:
-//     // await emailService.send({
-//     //     to: email,
-//     //     subject: "Your Account Password",
-//     //     template: "password-notification",
-//     //     data: {
-//     //         name: name,
-//     //         temporaryPassword: password,
-//     //         loginUrl: process.env.FRONTEND_URL + "/login"
-//     //     }
-//     // });
+//     const otp = generateOTP();
+//     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
+//     const isMember = !!member;
+//     const userId = member ? member.id : user?.id;
+
+//     if (!userId) {
+//         throw new Error("User ID not found");
+//     }
+
+//     await prisma.passwordReset.create({
+//         data: isMember
+//             ? {
+//                   email,
+//                   token: otp,
+//                   expiresAt,
+//                   userType: Role.MEMBER,
+//                   member: { connect: { id: member.id } },
+//               }
+//             : {
+//                   email,
+//                   token: otp,
+//                   expiresAt,
+//                   userType: user?.role || Role.STAFF,
+//                   member: undefined,
+//               },
+//     });
+
+//     console.log(`OTP for ${email}: ${otp}`);
+
+//     return { success: true, otp };
 // };
+
+// export const verifyResetOtp = async (email: string, otp: string) => {
+//     const record = await prisma.passwordReset.findFirst({
+//         where: {
+//             email,
+//             token: otp,
+//             expiresAt: { gt: new Date() },
+//             used: false,
+//         },
+//     });
+
+//     if (!record) {
+//         throw new Error("Invalid or expired OTP");
+//     }
+
+//     return {
+//         success: true,
+//         isMember: record.userType === Role.MEMBER,
+//     };
+// };
+
+// export const updatePassword = async (
+//     email: string,
+//     newPassword: string,
+//     isMember: boolean
+// ) => {
+//     const hashedPassword = await hashPassword(newPassword);
+
+//     await prisma.$transaction([
+//         isMember ?
+//             prisma.member.update({
+//                 where: { email },
+//                 data: { password: hashedPassword },
+//             }) :
+//             prisma.user.update({
+//                 where: { email },
+//                 data: { password: hashedPassword },
+//             }),
+//         prisma.passwordReset.updateMany({
+//             where: { email },
+//             data: { used: true, token: "" },
+//         }),
+//     ]);
+
+//     return { success: true };
+// };
+// // // Email service (implement based on your email provider)
+// // const sendPasswordEmail = async (email: string, password: string, name: string) => {
+// //     // Implement your email sending logic here
+// //     // This could use SendGrid, AWS SES, Nodemailer, etc.
+// //     console.log(`Email sent to ${email} with temporary password: ${password}`);
+
+// //     // Example implementation:
+// //     // await emailService.send({
+// //     //     to: email,
+// //     //     subject: "Your Account Password",
+// //     //     template: "password-notification",
+// //     //     data: {
+// //     //         name: name,
+// //     //         temporaryPassword: password,
+// //     //         loginUrl: process.env.FRONTEND_URL + "/login"
+// //     //     }
+// //     // });
+// // };

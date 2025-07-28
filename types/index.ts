@@ -11,6 +11,7 @@ import {
     LoanStatus,
     MemberStatus,
     UserStatus,
+    TransactionType,
 } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -27,60 +28,57 @@ export interface AuthenticatedRequest extends Request {
 
 export interface CreateMemberData {
     email: string;
-    password?: string;
     first_name: string;
     last_name: string;
     other_name?: string;
-    title: Title;
-    gender: Gender;
+    gender: string;
     phone: string;
+    title: string;
     address: string;
     state_of_origin: string;
     lga: string;
     type: MemberType;
-    role?: Role;
-    profile_picture: string;
-    totalSavings: number;
+    pin: string;
+    date_of_birth: Date;
+    service_number?: string;
+    profile_picture?: string;
+    totalSavings?: number;
     monthlyDeduction: number;
-    pin: number;
     bank: {
         name: string;
         account_number: string;
     };
-    kycInfo: {
-        identification: string;
-        id_card: string;
-        signature: string;
+    kycInfo?: {
+        identification?: string;
+        id_card?: string;
+        signature?: string;
     };
     security: {
         question: string;
         answer: string;
     };
-    service_number?: string;
-    rank?: Rank;
+    rank?: string;
     unit?: string;
-
-    nextOfKin?: {
+    nextOfKin: {
+        title: string;
         first_name: string;
         last_name: string;
-        relationship: Relationship;
-        title: Title;
+        relationship: string;
         phone: string;
         email?: string;
         address?: string;
-        gender: Gender;
+        gender: string;
     };
-
     guarantors?: Array<{
-        title: Title;
+        title: string;
         first_name: string;
         surname: string;
-        relationship: Relationship;
-        gender: Gender;
+        relationship: string;
+        gender: string;
         phone: string;
         email?: string;
         address: string;
-        rank: Rank;
+        rank: string;
         unit?: string;
         date_of_birth: Date;
     }>;
@@ -463,4 +461,44 @@ export interface LoanRepaymentReport {
             overdue: number;
         }[];
     };
+}
+
+export interface MemberLoanHistory {
+    id: string;
+    reference: string;
+    category: string;
+    appliedAmount: number;
+    approvedAmount: number;
+    interestRate: number;
+    durationMonths: number;
+    status: LoanStatus;
+    applicationDate: Date;
+    approvalDate: Date | null;
+    completionDate: Date | null;
+    totalRepaid: number;
+    outstandingBalance: number;
+    nextPaymentDue?: {
+        date: Date;
+        amount: number;
+    };
+    repayments: {
+        dueDate: Date;
+        amount: number;
+        status: string;
+        paidDate: Date | null;
+    }[];
+    transactions: {
+        id: string;
+        type: TransactionType;
+        amount: number;
+        date: Date;
+        status: string;
+        description: string;
+    }[];
+}
+
+export interface FileData {
+    buffer: Buffer;
+    mimetype: string;
+    originalname: string;
 }

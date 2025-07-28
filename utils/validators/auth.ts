@@ -18,3 +18,12 @@ export const userLoginSchema = Joi.object({
 export const pinSchema = Joi.object({
     pin: Joi.string().min(4).max(4).required(),
 });
+
+export const forgotPasswordSchema = Joi.object({
+    email: Joi.string().email().required(),
+});
+
+export const resetPasswordSchema = Joi.object({
+    token: Joi.string().required(),
+    newPassword: Joi.string().min(8).required(),
+});
