@@ -202,7 +202,7 @@ export const getTaskReports = async () => {
     });
 
     if (!reports.length) {
-        throw new Error("No reports found");
+        return [];
     }
 
     return reports.map((report) => ({
