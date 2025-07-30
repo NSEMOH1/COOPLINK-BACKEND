@@ -58,7 +58,7 @@ router.post(
 
 router.get(
     "/",
-    requireRoles([Role.ADMIN, Role.SUPER_ADMIN]),
+    requireRoles([Role.ADMIN, Role.STAFF, Role.SUPER_ADMIN]),
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
             const result = await getAllLoans();

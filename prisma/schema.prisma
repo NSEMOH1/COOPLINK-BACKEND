@@ -1,6 +1,3 @@
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -72,6 +69,8 @@ enum TransactionType {
   LOAN_APPROVED
   LOAN_REJECTED
   PENDING
+  CASH_REFUND
+  CASH_PAYMENT
 }
 
 enum TransactionStatus {
@@ -162,6 +161,19 @@ enum UserStatus {
   INACTIVE
 }
 
+enum TaskType {
+  LOAN_APPLICATION
+  CASH_REFUND
+  CASH_PAYMENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
 model Member {
   id               String             @id @default(cuid())
   email            String             @unique
@@ -198,6 +210,7 @@ model Member {
   Personel      Personel?
   Request       Request[]
   PasswordReset PasswordReset[]
+  tasks         Task[]          @relation("MemberTasks")
 
   @@map("members")
 }
@@ -296,22 +309,25 @@ model Guarantor {
 }
 
 model User {
-  id         String     @id @default(cuid())
-  email      String     @unique
-  password   String?
-  full_name  String
-  role       Role       @default(STAFF)
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
-  status     UserStatus @default(ACTIVE)
-  canEdit    Boolean    @default(false)
-  canDelete  Boolean    @default(false)
-  canView    Boolean    @default(false)
-
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String?
+  full_name     String
+  role          Role           @default(STAFF)
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  status        UserStatus     @default(ACTIVE)
+  canEdit       Boolean        @default(false)
+  canDelete     Boolean        @default(false)
+  canView       Boolean        @default(false)
   department    Department
   Notification  Notification[]
+  assignedTasks Task[]         @relation("AssignedTasks")
+  createdTasks  Task[]         @relation("CreatedTasks")
+  Loan          Loan[]
   approvedLoans Loan[]         @relation("approvedLoans")
   rejectedLoans Loan[]         @relation("rejectedLoans")
+  TaskReport    TaskReport[]
 
   @@map("users")
 }
@@ -331,7 +347,6 @@ model LoanCategory {
 
   loans Loan[]
 
-  // For REGULAR loans only - connects to rank-specific terms
   regularLoanTerms    LoanTerm[]
   RankLoanEligibility RankLoanEligibility[]
 
@@ -397,6 +412,8 @@ model Loan {
   member         Member       @relation(fields: [memberId], references: [id])
   otp            String?      @db.VarChar(6)
   otpExpiresAt   DateTime?
+  transferredAt  DateTime?
+  tasks          Task[]       @relation("LoanTasks")
   approvedById   String?
   approvedBy     User?        @relation(fields: [approvedById], references: [id], name: "approvedLoans")
   rejectedById   String?
@@ -404,6 +421,7 @@ model Loan {
 
   repayments   Repayment[]
   transactions Transaction[]
+  User         User?         @relation(fields: [userId], references: [id])
   userId       String?
 
   @@index([memberId])
@@ -513,4 +531,37 @@ model PasswordReset {
   userType  Role
   email     String
   createdAt DateTime @default(now())
+}
+
+model Task {
+  id                      String      @id @default(cuid())
+  type                    TaskType
+  status                  TaskStatus  @default(PENDING)
+  assignedToId            String
+  assignedTo              User        @relation(fields: [assignedToId], references: [id], name: "AssignedTasks")
+  createdById             String
+  createdBy               User        @relation(fields: [createdById], references: [id], name: "CreatedTasks")
+  loanId                  String?
+  loan                    Loan?       @relation(fields: [loanId], references: [id], name: "LoanTasks")
+  memberId                String?
+  member                  Member?     @relation(fields: [memberId], references: [id], name: "MemberTasks")
+  description             String?
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+  completedAt             DateTime?
+  transferredToDepartment Department?
+
+  @@map("tasks")
+}
+
+model TaskReport {
+  id               String   @id @default(cuid())
+  type             TaskType
+  completedCount   String
+  uncompletedCount String
+  user             String
+  userId           User     @relation(fields: [user], references: [id])
+  Memo             String
+
+  @@map("tasks_report")
 }

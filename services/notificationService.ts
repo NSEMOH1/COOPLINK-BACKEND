@@ -315,7 +315,7 @@ const notifyMemberApproval = async (
         message = `Congratulations! Your membership has been approved by 301 HAG CMS. Welcome to the cooperative!`;
         type = "SUCCESS";
     } else if (status === "REJECTED") {
-        message = `Your membership application has been rejected by ${user.full_name}. Please contact support for more information.`;
+        message = `Your membership application has been rejected by 301 HAG CMS. Please contact support for more information.`;
         type = "ERROR";
     } else {
         message = `Your membership status has been updated to ${status}`;

@@ -488,6 +488,15 @@ export const getAllLoans = () => {
                     email: true,
                 },
             },
+            tasks: {
+                select: {
+                    assignedTo: {
+                        select: {
+                            full_name: true
+                        }
+                    }
+                }
+            }
         },
     });
 
