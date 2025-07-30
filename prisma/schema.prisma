@@ -559,9 +559,11 @@ model TaskReport {
   type             TaskType
   completedCount   String
   uncompletedCount String
-  user             String
-  userId           User     @relation(fields: [user], references: [id])
+  userId           String
+  user             User   @relation(fields: [userId], references: [id])
   Memo             String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@map("tasks_report")
 }

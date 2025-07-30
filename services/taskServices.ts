@@ -189,6 +189,33 @@ export const submitTaskReport = async ({
     };
 };
 
+export const getTaskReports = async () => {
+    const reports = await prisma.taskReport.findMany({
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    full_name: true,
+                },
+            },
+        },
+    });
+
+    if (!reports.length) {
+        throw new Error("No reports found");
+    }
+
+    return reports.map((report) => ({
+        reportId: report.id,
+        type: report.type,
+        date: report.createdAt.toISOString().split("T")[0],
+        completedCount: parseInt(report.completedCount),
+        uncompletedCount: parseInt(report.uncompletedCount),
+        memo: report.Memo,
+        fullName: report.user.full_name,
+    }));
+};
+
 export const getUserTasks = async (userId: any) => {
     const tasks = await prisma.task.findMany({
         where: { assignedToId: userId, transferredToDepartment: null },
@@ -368,46 +395,67 @@ export const assignCashTask = async ({
     return { task, transaction };
 };
 
-export const getStaffTaskSummary = async (userId: any, date: any) => {
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, full_name: true },
-    });
-    if (!user) {
-        throw new Error("User not found");
-    }
-
+export const getStaffTaskSummary = async ({ date }: { date: any }) => {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const assignedCount = await prisma.task.count({
+    const staffUsers = await prisma.user.findMany({
         where: {
-            assignedToId: userId,
+            role: { in: ["STAFF", "ADMIN"] },
+        },
+        select: {
+            id: true,
+            full_name: true,
+        },
+    });
+
+    if (!staffUsers.length) {
+        return [];
+    }
+
+    const assignedTasks = await prisma.task.groupBy({
+        by: ["assignedToId"],
+        where: {
+            assignedToId: { in: staffUsers.map((user) => user.id) },
             createdAt: {
                 gte: startOfDay,
                 lte: endOfDay,
             },
         },
+        _count: { id: true },
     });
 
-    const completedCount = await prisma.task.count({
+    const completedTasks = await prisma.task.groupBy({
+        by: ["assignedToId"],
         where: {
-            assignedToId: userId,
+            assignedToId: { in: staffUsers.map((user) => user.id) },
             status: "COMPLETED",
             completedAt: {
                 gte: startOfDay,
                 lte: endOfDay,
             },
         },
+        _count: { id: true },
     });
 
-    return {
-        userId: user.id,
-        fullName: user.full_name,
-        date: startOfDay.toISOString().split("T")[0],
-        assignedCount,
-        completedCount,
-    };
+    const taskSummaries = staffUsers.map((user) => {
+        const assigned =
+            assignedTasks.find((task) => task.assignedToId === user.id)?._count
+                .id || 0;
+        const completed =
+            completedTasks.find((task) => task.assignedToId === user.id)?._count
+                .id || 0;
+
+        return {
+            userId: user.id,
+            fullName: user.full_name,
+            date: startOfDay.toISOString().split("T")[0],
+            assignedCount: assigned,
+            completedCount: completed,
+        };
+    });
+
+    return taskSummaries;
 };

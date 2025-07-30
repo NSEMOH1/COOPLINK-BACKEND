@@ -7,6 +7,8 @@ import {
     assignLoanTask,
     completeTask,
     getDailyTaskStats,
+    getStaffTaskSummary,
+    getTaskReports,
     getTransferredLoans,
     getUserTasks,
     submitTaskReport,
@@ -36,7 +38,6 @@ router.post(
         }
     }
 );
-
 
 router.post(
     "/assign-cash",
@@ -190,7 +191,7 @@ router.get(
 );
 
 router.get(
-    "/stats/:userId",
+    "/stats",
     requireRoles([Role.SUPER_ADMIN]),
     async (
         req: AuthenticatedRequest,
@@ -198,10 +199,26 @@ router.get(
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { userId } = req.params;
             const { date = new Date().toISOString().split("T")[0] } = req.query;
-            const stats = await getDailyTaskStats({ userId, date });
+            const stats = await getStaffTaskSummary({ date });
             res.json(stats);
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.get(
+    "/reports",
+    requireRoles([Role.SUPER_ADMIN]),
+    async (
+        req: AuthenticatedRequest,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const reports = await getTaskReports();
+            res.json(reports);
         } catch (error) {
             next(error);
         }
