@@ -149,7 +149,8 @@ router.post(
             if (
                 !type ||
                 !userId ||
-                !completedCount ||
+                completedCount === undefined ||
+                completedCount === null ||
                 completedCount < 0 ||
                 uncompletedCount < 0
             ) {
@@ -157,6 +158,7 @@ router.post(
                     "Invalid report data: userId, completedCount, and uncompletedCount are required, and counts must be non-negative"
                 );
             }
+
             const report = await submitTaskReport({
                 type,
                 date,

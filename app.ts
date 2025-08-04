@@ -19,6 +19,7 @@ import { adminReportRoutes } from "./routes/admin-report";
 import path from "path";
 import fs from "fs";
 import { taskRoutes } from "./routes/tasks";
+import { terminationRoutes } from "./routes/termination";
 
 const createApp = () => {
     const app = express();
@@ -66,6 +67,7 @@ const createApp = () => {
     app.use("/api/notifications", notificationRoutes);
     app.use("/api/admin-report", adminReportRoutes);
     app.use("/api/tasks", taskRoutes);
+    app.use("/api/termination", terminationRoutes);
 
     app.use(/.*/, (req, res) => {
         res.status(404).json({ error: "Route not found" });

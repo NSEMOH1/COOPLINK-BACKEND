@@ -148,7 +148,6 @@ export const completeTask = async ({ taskIds, userId }: any) => {
 
     return updatedTasks.slice(0, tasks.length);
 };
-
 export const submitTaskReport = async ({
     type,
     date,
@@ -160,9 +159,12 @@ export const submitTaskReport = async ({
     if (
         !type ||
         !date ||
-        !completedCount ||
+        !userId ||
+        completedCount === undefined ||
+        completedCount === null ||
         completedCount < 0 ||
-        !uncompletedCount ||
+        uncompletedCount === undefined ||
+        uncompletedCount === null ||
         uncompletedCount < 0
     ) {
         throw new Error("Invalid report data");
@@ -173,7 +175,7 @@ export const submitTaskReport = async ({
             type,
             completedCount: completedCount.toString(),
             uncompletedCount: uncompletedCount.toString(),
-            user: userId,
+            userId: userId,
             Memo: memo || "",
         },
     });
@@ -188,7 +190,6 @@ export const submitTaskReport = async ({
         reportId: report.id,
     };
 };
-
 export const getTaskReports = async () => {
     const reports = await prisma.taskReport.findMany({
         include: {

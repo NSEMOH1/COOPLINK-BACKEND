@@ -1,10 +1,24 @@
 import { SavingStatus, SavingType, TransactionType } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "../config/database";
-import { createSavings, IWithdrawSavings } from "../types";
+import {
+    CooperativeSavingsRecord,
+    createSavings,
+    IWithdrawSavings,
+    UploadResult,
+} from "../types";
 import { generateSavingsReference } from "../utils/functions";
 import { comparePin } from "../utils/password";
+import * as XLSX from 'xlsx';
 
+export const getMemberTotalSavings = async (memberId: string) => {
+    const result = await prisma.saving.aggregate({
+        where: { memberId },
+        _sum: { amount: true },
+    });
+
+    return result._sum.amount || new Decimal(0);
+};
 export const addSavings = async (data: createSavings) => {
     const validCategories = ["QUICK", "COOPERATIVE"] as const;
 
@@ -75,15 +89,6 @@ export const addSavings = async (data: createSavings) => {
             },
         });
 
-        await tx.member.update({
-            where: { id: data.memberId },
-            data: {
-                totalSavings: {
-                    increment: amount,
-                },
-            },
-        });
-
         return saving;
     });
 
@@ -104,11 +109,13 @@ export const withdrawSavings = async (data: IWithdrawSavings) => {
 
     if (!category) throw new Error("Savings Category doesn't exist");
     if (category.name === "COOPERATIVE")
-        throw new Error("You cannot withdraw this yet");
+        throw new Error(
+            "You cannot withdraw this at the moment, Please contact the Admin for more information"
+        );
 
     const member = await prisma.member.findUnique({
         where: { id: data.memberId },
-        select: { id: true, pin: true, totalSavings: true },
+        select: { id: true, pin: true },
     });
 
     if (!member) throw new Error("Member doesn't exist");
@@ -118,10 +125,10 @@ export const withdrawSavings = async (data: IWithdrawSavings) => {
 
     const amount = new Decimal(data.amount);
     const zero = new Decimal(0);
-    const memberTotalSavings = new Decimal(member.totalSavings);
+    const totalSavings = await getMemberTotalSavings(member.id);
 
     if (amount.lte(zero)) throw new Error("Amount must be greater than zero");
-    if (memberTotalSavings.lt(amount))
+    if (totalSavings.lt(amount))
         throw new Error("Insufficient savings balance");
 
     const result = await prisma.$transaction(async (tx) => {
@@ -157,11 +164,6 @@ export const withdrawSavings = async (data: IWithdrawSavings) => {
             },
         });
 
-        await tx.member.update({
-            where: { id: data.memberId },
-            data: { totalSavings: { decrement: amount.toNumber() } },
-        });
-
         return saving;
     });
 
@@ -172,8 +174,8 @@ export const getSavingsBalance = async (memberId: string) => {
     const member = await prisma.member.findUnique({
         where: { id: memberId },
         select: {
-            totalSavings: true,
             monthlyDeduction: true,
+            id: true,
         },
     });
 
@@ -204,8 +206,10 @@ export const getSavingsBalance = async (memberId: string) => {
         },
     });
 
+    const totalSavings = await getMemberTotalSavings(member.id);
+
     const result = {
-        totalSavings: member.totalSavings,
+        totalSavings: totalSavings,
         monthlyDeduction: member.monthlyDeduction,
         normalSavings: new Decimal(0),
         cooperativeSavings: new Decimal(0),
@@ -271,22 +275,221 @@ export const editDeduction = async (amount: number, memberId: string) => {
     };
 };
 
-export const getAllSavings = () => {
-    const savings = prisma.saving.findMany({
-        select: {
-            id: true,
-            member: true,
-            amount: true,
-            category: true,
-            reference: true,
-            createdAt: true,
-            status: true,
+export const getAllSavings = async () => {
+    const [savings, total] = await Promise.all([
+        prisma.saving.findMany({
+            select: {
+                id: true,
+                member: true,
+                amount: true,
+                category: true,
+                reference: true,
+                createdAt: true,
+                status: true,
+            },
+        }),
+        prisma.saving.aggregate({
+            _sum: {
+                amount: true
+            }
+        })
+    ]);
+
+    return {
+        savings: savings.length ? savings : "No Savings found",
+        total: total._sum.amount || 0
+    };
+};
+
+export const uploadCooperativeSavingsFromExcel = async (
+    fileBuffer: Buffer,
+    uploadedBy?: string
+): Promise<UploadResult> => {
+    const result: UploadResult = {
+        success: false,
+        processedCount: 0,
+        errorCount: 0,
+        errors: [],
+        summary: {
+            totalAmount: 0,
+            validRecords: 0,
+            invalidRecords: 0,
         },
-    });
+    };
 
-    if (!savings) {
-        return "No Savings found";
+    try {
+        const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+        if (!jsonData || jsonData.length === 0) {
+            throw new Error("Excel file is empty or invalid");
+        }
+
+        // Get cooperative savings category
+        const cooperativeCategory = await prisma.savingCategory.findUnique({
+            where: { type: SavingType.COOPERATIVE },
+        });
+
+        if (!cooperativeCategory) {
+            throw new Error("Cooperative savings category not found");
+        }
+
+        // Process records in transaction
+        await prisma.$transaction(async (tx) => {
+            const validRecords: CooperativeSavingsRecord[] = [];
+
+            // Validate and parse data
+            for (let i = 0; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                const rowNumber = i + 2; // Excel row number (assuming row 1 is header)
+
+                try {
+                    // Extract data (adjust column names based on your Excel structure)
+                    const serviceNumber =
+                        row["Service Number"] ||
+                        row["service_number"] ||
+                        row["ServiceNumber"];
+                    const amount = parseFloat(
+                        row["Amount"] || row["amount"] || row["Deduction"]
+                    );
+                    const memberName =
+                        row["Name"] || row["name"] || row["Member Name"];
+
+                    // Validate required fields
+                    if (!serviceNumber) {
+                        result.errors.push({
+                            row: rowNumber,
+                            error: "Service number is required",
+                        });
+                        continue;
+                    }
+
+                    if (!amount || amount <= 0) {
+                        result.errors.push({
+                            row: rowNumber,
+                            serviceNumber: serviceNumber.toString(),
+                            error: "Valid amount is required",
+                        });
+                        continue;
+                    }
+
+                    validRecords.push({
+                        serviceNumber: serviceNumber.toString().trim(),
+                        amount,
+                        memberName: memberName?.toString().trim(),
+                    });
+                } catch (error) {
+                    result.errors.push({
+                        row: rowNumber,
+                        error: `Error parsing row: ${
+                            error instanceof Error
+                                ? error.message
+                                : "Unknown error"
+                        }`,
+                    });
+                }
+            }
+
+            result.summary.validRecords = validRecords.length;
+            result.summary.invalidRecords = result.errors.length;
+
+            // Process valid records
+            for (const record of validRecords) {
+                try {
+                    // Find member by service number
+                    const member = await tx.member.findFirst({
+                        where: { service_number: record.serviceNumber },
+                        select: {
+                            id: true,
+                            first_name: true,
+                            last_name: true,
+                            service_number: true,
+                        },
+                    });
+
+                    if (!member) {
+                        result.errors.push({
+                            row: 0, // We don't have row number at this point
+                            serviceNumber: record.serviceNumber,
+                            error: "Member with this service number not found",
+                        });
+                        result.errorCount++;
+                        continue;
+                    }
+
+                    // Validate member name if provided in Excel
+                    if (record.memberName) {
+                        const fullName =
+                            `${member.first_name} ${member.last_name}`.toLowerCase();
+                        const providedName = record.memberName.toLowerCase();
+
+                        if (
+                            !fullName.includes(providedName) &&
+                            !providedName.includes(fullName)
+                        ) {
+                            result.errors.push({
+                                row: 0,
+                                serviceNumber: record.serviceNumber,
+                                error: `Name mismatch: Expected '${fullName}', found '${record.memberName}'`,
+                            });
+                            result.errorCount++;
+                            continue;
+                        }
+                    }
+
+                    const amount = new Decimal(record.amount);
+                    const reference = generateSavingsReference();
+
+                    // Create cooperative savings record
+                    const saving = await tx.saving.create({
+                        data: {
+                            memberId: member.id,
+                            categoryId: cooperativeCategory.id,
+                            amount: amount,
+                            reference: reference,
+                            status: SavingStatus.COMPLETED,
+                        },
+                    });
+
+                    // Create transaction record
+                    await tx.transaction.create({
+                        data: {
+                            memberId: member.id,
+                            amount: amount.toNumber(),
+                            type: TransactionType.SAVINGS_DEPOSIT,
+                            reference: reference,
+                            description: `Cooperative savings deduction from external bank account (Service No: ${record.serviceNumber})`,
+                            status: "COMPLETED",
+                        },
+                    });
+
+                    result.processedCount++;
+                    result.summary.totalAmount += record.amount;
+                } catch (error) {
+                    result.errors.push({
+                        row: 0,
+                        serviceNumber: record.serviceNumber,
+                        error: `Error processing record: ${
+                            error instanceof Error
+                                ? error.message
+                                : "Unknown error"
+                        }`,
+                    });
+                    result.errorCount++;
+                }
+            }
+        });
+
+        result.success = result.processedCount > 0;
+
+        return result;
+    } catch (error) {
+        throw new Error(
+            `Failed to process Excel file: ${
+                error instanceof Error ? error.message : "Unknown error"
+            }`
+        );
     }
-
-    return savings;
 };

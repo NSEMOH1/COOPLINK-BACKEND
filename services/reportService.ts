@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import NodeCache from "node-cache";
+import { getMemberTotalSavings } from "./savingsService";
 
 const reportCache = new NodeCache({ stdTTL: 3600 });
 
@@ -396,6 +397,7 @@ export const generateMemberFinancialSummary = async (
             return acc;
         }, {} as Record<string, { count: number; amount: number }>),
     };
+    const totalSavings = await getMemberTotalSavings(member.id)
 
     const report = {
         member: {
@@ -407,7 +409,7 @@ export const generateMemberFinancialSummary = async (
             type: member.type,
             rank: member.Personel?.rank || null,
             unit: member.Personel?.unit || null,
-            totalSavings: member.totalSavings,
+            totalSavings: totalSavings,
             monthlyDeduction: member.monthlyDeduction,
         },
         period:
@@ -452,7 +454,6 @@ export const getAllMembersFinancialSummary = async (
             email: true,
             phone: true,
             type: true,
-            totalSavings: true,
             monthlyDeduction: true,
             Personel: {
                 select: {
@@ -495,6 +496,7 @@ export const getAllMembersFinancialSummary = async (
             },
         }),
     ]);
+    
 
     const memberData = members.map((member) => {
         const memberTransactions = transactions.filter(
@@ -502,6 +504,8 @@ export const getAllMembersFinancialSummary = async (
         );
         const memberLoans = loans.filter((l) => l.memberId === member.id);
         const memberSavings = savings.filter((s) => s.memberId === member.id);
+        const totalSavings = getMemberTotalSavings(member.id)
+        
 
         return {
             id: member.id,
@@ -512,7 +516,7 @@ export const getAllMembersFinancialSummary = async (
             type: member.type,
             rank: member.Personel?.rank || null,
             unit: member.Personel?.unit || null,
-            totalSavings: member.totalSavings,
+            totalSavings: totalSavings,
             monthlyDeduction: member.monthlyDeduction,
             transactionCount: memberTransactions.length,
             totalTransactionAmount: memberTransactions.reduce(

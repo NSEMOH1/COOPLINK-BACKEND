@@ -383,7 +383,10 @@ export const getMemberLoanBalance = async (memberId: string) => {
     const categoryTotals = await prisma.loan.groupBy({
         by: ["categoryId"],
         _sum: { amount: true },
-        where: { memberId },
+        where: {
+            memberId,
+            status: LoanStatus.DISBURSED,
+        },
     });
 
     const categorySummary = categories.map((category) => {
@@ -492,11 +495,11 @@ export const getAllLoans = () => {
                 select: {
                     assignedTo: {
                         select: {
-                            full_name: true
-                        }
-                    }
-                }
-            }
+                            full_name: true,
+                        },
+                    },
+                },
+            },
         },
     });
 

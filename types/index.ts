@@ -502,3 +502,25 @@ export interface FileData {
     mimetype: string;
     originalname: string;
 }
+
+export interface CooperativeSavingsRecord {
+    serviceNumber: string;
+    amount: number;
+    memberName?: string;
+}
+
+export interface UploadResult {
+    success: boolean;
+    processedCount: number;
+    errorCount: number;
+    errors: Array<{
+        row: number;
+        serviceNumber?: string;
+        error: string;
+    }>;
+    summary: {
+        totalAmount: number;
+        validRecords: number;
+        invalidRecords: number;
+    };
+}

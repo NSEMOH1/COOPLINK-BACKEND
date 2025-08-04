@@ -25,7 +25,6 @@ router.get(
                             last_name: true,
                             service_number: true,
                             phone: true,
-                            totalSavings: true,
                             bank: {
                                 select: {
                                     account_number: true,

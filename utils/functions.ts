@@ -96,3 +96,18 @@ export const testLoanCalculations = () => {
         );
     });
 };
+
+export const calculateProcessingTime = (
+    startTime: Date,
+    endTime: Date
+): string => {
+    const diffMs = endTime.getTime() - startTime.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffSecs = Math.floor((diffMs % 60000) / 1000);
+
+    if (diffMins > 0) {
+        return `${diffMins}:${diffSecs.toString().padStart(2, "0")} mins`;
+    } else {
+        return `${diffSecs} secs`;
+    }
+};
