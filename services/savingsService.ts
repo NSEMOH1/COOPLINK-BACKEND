@@ -9,7 +9,7 @@ import {
 } from "../types";
 import { generateSavingsReference } from "../utils/functions";
 import { comparePin } from "../utils/password";
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 
 export const getMemberTotalSavings = async (memberId: string) => {
     const result = await prisma.saving.aggregate({
@@ -290,14 +290,14 @@ export const getAllSavings = async () => {
         }),
         prisma.saving.aggregate({
             _sum: {
-                amount: true
-            }
-        })
+                amount: true,
+            },
+        }),
     ]);
 
     return {
         savings: savings.length ? savings : "No Savings found",
-        total: total._sum.amount || 0
+        total: total._sum.amount || 0,
     };
 };
 
@@ -318,13 +318,46 @@ export const uploadCooperativeSavingsFromExcel = async (
     };
 
     try {
-        const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+        let workbook;
+        try {
+            workbook = XLSX.read(fileBuffer, { type: "buffer" });
+        } catch (error) {
+            throw new Error("Invalid Excel file format");
+        }
+
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+            throw new Error("Excel file contains no worksheets");
+        }
+
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
+
+        if (!worksheet) {
+            throw new Error("Could not access the first worksheet");
+        }
+
         const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
         if (!jsonData || jsonData.length === 0) {
-            throw new Error("Excel file is empty or invalid");
+            throw new Error("Excel worksheet contains no data");
+        }
+
+        const firstRow = jsonData[0];
+        if (!firstRow) {
+            throw new Error("Could not read first row of data");
+        }
+
+        const hasServiceNumber =
+            firstRow["Service Number"] ||
+            firstRow["service_number"] ||
+            firstRow["ServiceNumber"];
+        const hasAmount =
+            firstRow["Amount"] || firstRow["amount"] || firstRow["Deduction"];
+
+        if (!hasServiceNumber || !hasAmount) {
+            throw new Error(
+                "Excel file is missing required columns (Service Number and Amount)"
+            );
         }
 
         // Get cooperative savings category

@@ -27,35 +27,18 @@ import path from "path";
 const router = Router();
 
 const upload = multer({
-    storage: multer.diskStorage({
-        destination: (req, file, cb) => {
-            cb(null, "uploads/");
-        },
-        filename: (req, file, cb) => {
-            const uniqueSuffix =
-                Date.now() + "-" + Math.round(Math.random() * 1e9);
-            cb(
-                null,
-                file.fieldname +
-                    "-" +
-                    uniqueSuffix +
-                    path.extname(file.originalname)
-            );
-        },
-    }),
+    storage: multer.memoryStorage(),
     limits: {
         fileSize: 1 * 1024 * 1024, 
     },
     fileFilter: (req, file, cb) => {
-        const allowedTypes = [
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel",
-        ];
-
-        if (allowedTypes.includes(file.mimetype)) {
+        if (
+            file.mimetype.includes("excel") ||
+            file.mimetype.includes("spreadsheet")
+        ) {
             cb(null, true);
         } else {
-            cb(new Error("Invalid file type. Only Excel files are allowed."));
+            cb(new Error("Only Excel files are allowed"));
         }
     },
 });
@@ -219,7 +202,7 @@ router.get(
 
             res.status(201).json({
                 success: true,
-                ...data
+                ...data,
             });
         } catch (error) {
             next(error);
@@ -256,7 +239,6 @@ router.get(
     }
 );
 
-
 router.post(
     "/upload/cooperative-savings",
     requireRoles([Role.ADMIN, Role.SUPER_ADMIN]),
@@ -271,6 +253,23 @@ router.post(
                 res.status(400).json({
                     success: false,
                     error: "No file uploaded",
+                });
+                return;
+            }
+
+            console.log(req.file);
+            if (!req.file.buffer || req.file.buffer.length === 0) {
+                res.status(400).json({
+                    success: false,
+                    error: "Uploaded file is empty",
+                });
+                return;
+            }
+            const isExcel = req.file.buffer.subarray(0, 2).toString() === "PK";
+            if (!isExcel) {
+                res.status(400).json({
+                    success: false,
+                    error: "File is not a valid Excel format",
                 });
                 return;
             }
