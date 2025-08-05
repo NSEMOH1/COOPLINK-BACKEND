@@ -22,7 +22,6 @@ import {
 import { prisma } from "../config/database";
 import { calculateProcessingTime } from "../utils/functions";
 import multer from "multer";
-import path from "path";
 
 const router = Router();
 

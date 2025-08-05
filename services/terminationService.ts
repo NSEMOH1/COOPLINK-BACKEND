@@ -16,9 +16,63 @@ export const requestTermination = async (data: ITermination) => {
     return result;
 };
 
-export const getAllTerminations = async () => {
-    const result = await prisma.termination.findMany();
-    if (!result) return { message: "No Termination Request found" };
+export const getAllTerminations = async (
+    page = 1,
+    limit = 10,
+    startDate?: string,
+    endDate?: string
+) => {
+    const skip = (page - 1) * limit;
 
-    return result;
+    const whereClause: any = {};
+    if (startDate && endDate) {
+        whereClause.createdAt = {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+        };
+    }
+    const total = await prisma.termination.count({
+        where: whereClause,
+    });
+
+    const result = await prisma.termination.findMany({
+        where: whereClause,
+        include: {
+            member: {
+                select: {
+                    id: true,
+                    first_name: true,
+                    last_name: true,
+                    service_number: true,
+                    email: true,
+                    phone: true,
+                },
+            },
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+        skip,
+        take: limit,
+    });
+
+    if (!result || result.length === 0) {
+        return {
+            success: true,
+            message: "No Termination Request found",
+            data: [],
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+        };
+    }
+
+    return {
+        data: result,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+    };
 };
