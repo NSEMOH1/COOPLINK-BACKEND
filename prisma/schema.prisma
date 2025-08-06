@@ -599,3 +599,28 @@ model UploadLog {
 
   @@map("upload_logs")
 }
+
+model StockCategory {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Stock     Stock[]
+
+  @@map("stock_category")
+}
+
+model Stock {
+  id          String        @id @default(cuid())
+  name        String
+  description String
+  quantity    Int
+  cost_price  Decimal       @db.Decimal(15, 2)
+  sales_price Decimal       @db.Decimal(15, 2)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  categoryId  String
+  category    StockCategory @relation(fields: [categoryId], references: [id])
+
+  @@map("stock")
+}
